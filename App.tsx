@@ -1,7 +1,6 @@
-
 import React, { useState, useCallback } from 'react';
 import { FunnelJSON, FunnelFormState } from './types';
-import { generateFunnel } from './services/geminiService';
+import { generateFunnelStream } from './services/geminiService';
 import Header from './components/Header';
 import FunnelForm from './components/FunnelForm';
 import { FunnelDisplay } from './components/FunnelDisplay';
@@ -10,19 +9,25 @@ const App: React.FC = () => {
   const [data, setData] = useState<FunnelJSON | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [streamingResponse, setStreamingResponse] = useState<string>('');
 
   const onGenerate = useCallback(async (formState: FunnelFormState) => {
     setLoading(true);
     setError(null);
     setData(null);
+    setStreamingResponse('');
+
     try {
-      const result = await generateFunnel(formState);
+      const result = await generateFunnelStream(formState, (chunk) => {
+        setStreamingResponse((prev) => prev + chunk);
+      });
       setData(result);
     } catch (err: any) {
       setError(err?.message || 'Failed to generate funnel.');
       console.error(err);
     } finally {
       setLoading(false);
+      setStreamingResponse('');
     }
   }, []);
 
@@ -40,7 +45,7 @@ const App: React.FC = () => {
             <FunnelForm onSubmit={onGenerate} isLoading={loading} />
             
             <div className="mt-12">
-              <FunnelDisplay data={data} loading={loading} error={error} />
+              <FunnelDisplay data={data} loading={loading} error={error} streamingResponse={streamingResponse} />
             </div>
           </div>
         </main>

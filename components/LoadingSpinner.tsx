@@ -9,7 +9,7 @@ const LoadingSpinner: React.FC = () => {
         <div className="absolute inset-0 rounded-full border-t-4 border-purple-500 animate-spin"></div>
       </div>
       <p className="mt-4 text-lg font-semibold text-slate-300 tracking-wider">Crafting Your Funnel...</p>
-      <p className="text-sm text-slate-500">The AI is putting on its marketing hat.</p>
+      <p className="text-sm text-slate-500">The AI is putting on its marketing hat. This can take up to a minute.</p>
     </div>
   );
 };

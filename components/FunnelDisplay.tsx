@@ -10,6 +10,7 @@ type Props = {
   data?: FunnelJSON | null;
   loading?: boolean;
   error?: string | null;
+  streamingResponse?: string;
 };
 
 const Card: React.FC<{
@@ -80,7 +81,18 @@ const CodeBlock: React.FC<{ value: string }> = ({ value }) => (
   <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-black/40 p-3 text-xs text-white/90">{value}</pre>
 );
 
-export const FunnelDisplay: React.FC<Props> = ({ data, loading, error }) => {
+const StreamingDisplay: React.FC<{ content: string }> = ({ content }) => (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <h3 className="font-semibold text-white/90">AI is generating...</h3>
+        <p className="text-sm text-white/60 mb-3">You are seeing the raw data stream in real-time.</p>
+        <pre className="whitespace-pre-wrap rounded-lg bg-black/40 p-3 text-xs text-white/90 h-64 overflow-y-auto">
+            {content}
+        </pre>
+    </div>
+);
+
+
+export const FunnelDisplay: React.FC<Props> = ({ data, loading, error, streamingResponse }) => {
   const hasData = !!data && !!data.meta;
 
   const palettePreview = useMemo(() => {
@@ -104,8 +116,10 @@ export const FunnelDisplay: React.FC<Props> = ({ data, loading, error }) => {
   }, [data]);
 
   if (loading) {
-    return <LoadingSpinner />;
+    // If we have streaming content, show it. Otherwise, show the spinner.
+    return streamingResponse ? <StreamingDisplay content={streamingResponse} /> : <LoadingSpinner />;
   }
+
   if (error) {
     return (
       <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-100">
