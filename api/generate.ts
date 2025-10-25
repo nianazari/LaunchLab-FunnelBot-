@@ -226,25 +226,23 @@ export default async function handler(request: Request): Promise<Response> {
         const { brandIdea, industry, tone, mode } = formState;
 
         const prompt = `
-            You are LaunchLab FunnelBot — an expert direct-response marketer and funnel architect.
-            You generate complete, conversion-ready funnels from a single brand idea.
+            As an expert direct-response marketer named FunnelBot, generate a complete, conversion-ready marketing funnel based on the provided inputs.
 
-            ALWAYS return ONLY valid JSON (UTF-8, no markdown, no comments).
-            Do not include explanations outside the JSON.
+            **Your Task:**
+            Create all the copy, structure, branding, and marketing assets for a landing page.
+            The output must be a single, valid JSON object that strictly follows the provided schema. Do not include any text, markdown, or comments outside of the JSON object.
 
-            Inputs (provided by the UI):
-            - brand_idea: "${brandIdea}"
-            - industry: "${industry}"
-            - tone: "${tone}"
-            - mode: "${mode}"
+            **Inputs:**
+            - Brand/Product Idea: "${brandIdea}"
+            - Industry: "${industry}"
+            - Tone of Voice: "${tone}"
+            - Generation Mode: "${mode}" (Quick = concise copy, Detailed = more fleshed-out copy)
 
-            Rules:
-            - Voice must reflect the tone: "${tone}".
-            - Keep copy scannable: short sentences, bullets where helpful.
-            - For “Quick”, keep each section concise (1–2 lines). For “Detailed”, expand with 3–6 lines where appropriate.
-            - Make the offer feel specific to the industry "${industry}" and brand idea "${brandIdea}".
-            - Use pragmatic, credible promises. Avoid hype or guarantees.
-            - Your output MUST strictly adhere to the provided JSON schema.
+            **Key Directives:**
+            - **Tone:** The copy must consistently reflect the "${tone}" tone.
+            - **Clarity:** Use scannable copy with short sentences and bullet points.
+            - **Relevance:** The offer and all content should be highly relevant to the "${industry}" and the core idea: "${brandIdea}".
+            - **Credibility:** Use realistic promises. Avoid hype.
         `;
 
         const response = await ai.models.generateContent({
@@ -256,16 +254,29 @@ export default async function handler(request: Request): Promise<Response> {
                 temperature: 0.7,
             },
         });
-
-        const jsonText = response.text.trim();
-        // A simple check to ensure it's likely JSON before parsing
-        if (!jsonText.startsWith('{') || !jsonText.endsWith('}')) {
-             throw new Error("Model did not return valid JSON.");
+        
+        const rawText = response.text;
+        
+        // Defensively find and extract the JSON part of the response
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            console.error("Model response did not contain a valid JSON object. Response:", rawText);
+            throw new Error("Failed to generate valid funnel structure. The model's response was not in the expected format.");
         }
-        const parsedData: FunnelJSON = JSON.parse(jsonText);
+        
+        const jsonText = jsonMatch[0];
+        let parsedData: FunnelJSON;
+
+        try {
+            parsedData = JSON.parse(jsonText);
+        } catch (parseError: any) {
+            console.error("Failed to parse JSON from model. Raw text:", jsonText);
+            throw new Error(`The model returned a malformed structure. Details: ${parseError.message}`);
+        }
+
 
         if (!parsedData.meta || !parsedData.layout) {
-            throw new Error("Received invalid data structure from API.");
+            throw new Error("Received invalid data structure from API. Required fields are missing.");
         }
 
         return new Response(JSON.stringify(parsedData), {
